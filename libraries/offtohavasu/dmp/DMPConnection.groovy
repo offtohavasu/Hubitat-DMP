@@ -17,6 +17,7 @@ class DMPConnection implements hubitat.helper.Interface {
     private final Object owner
     private final int reconnectDelaySeconds
     private final int keepaliveIntervalSeconds
+    private final DMPClient client
 
     private SocketWrapper socket
     private boolean connected
@@ -24,8 +25,9 @@ class DMPConnection implements hubitat.helper.Interface {
     private boolean shutdownRequested
     private boolean keepaliveActive
     private boolean keepaliveScheduled
+    private final boolean debugLogging
 
-    DMPConnection(DMPProtocol protocol, String host, int port, Object owner = null, int reconnectDelaySeconds = 5, int keepaliveIntervalSeconds = 10) {
+    DMPConnection(DMPProtocol protocol, String host, int port, Object owner = null, int reconnectDelaySeconds = 5, int keepaliveIntervalSeconds = 10, DMPClient client = null, boolean debugLogging = false) {
         if (protocol == null) {
             throw new IllegalArgumentException("protocol must not be null")
         }
@@ -42,11 +44,13 @@ class DMPConnection implements hubitat.helper.Interface {
         this.owner = owner
         this.reconnectDelaySeconds = Math.max(1, reconnectDelaySeconds)
         this.keepaliveIntervalSeconds = Math.max(1, keepaliveIntervalSeconds)
+        this.client = client
         this.connected = false
         this.reconnectPending = false
         this.shutdownRequested = false
         this.keepaliveActive = false
         this.keepaliveScheduled = false
+        this.debugLogging = debugLogging
         this.socket = new SocketWrapper(this)
     }
 
@@ -62,6 +66,7 @@ class DMPConnection implements hubitat.helper.Interface {
             logInfo("Connecting to ${host}:${port}")
             socket.connect(host, port, 10000)
             connected = true
+            logDebug("TCP connection established to ${host}:${port}")
             logInfo("Connected to ${host}:${port}")
             startKeepalive()
             return true
@@ -74,6 +79,7 @@ class DMPConnection implements hubitat.helper.Interface {
     }
 
     void disconnect() {
+        logDebug("Disconnect requested for ${host}:${port}")
         shutdownRequested = true
         reconnectPending = false
         stopKeepalive()
@@ -90,6 +96,7 @@ class DMPConnection implements hubitat.helper.Interface {
     }
 
     boolean reconnect() {
+        logDebug("Reconnect requested for ${host}:${port}")
         disconnect()
         shutdownRequested = false
         return connect()
@@ -127,6 +134,9 @@ class DMPConnection implements hubitat.helper.Interface {
 
         try {
             byte[] payload = protocol.encodeCommand(command, args)
+            if (client != null) {
+                client.noteOutboundCommand(command)
+            }
             return send(payload)
         } catch (Exception e) {
             logError("Failed to encode/send command '${command}': ${e.message}", e)
@@ -159,7 +169,10 @@ class DMPConnection implements hubitat.helper.Interface {
         try {
             byte[] payload = data instanceof byte[] ? (byte[]) data : data.toString().getBytes("UTF-8")
             if (payload != null && payload.length > 0) {
-                protocol.decodeResponse(payload)
+                Object decoded = protocol.decodeResponse(payload)
+                if (client != null) {
+                    client.handleResponse(decoded)
+                }
             }
         } catch (Exception e) {
             logError("Failed to pass socket data to protocol: ${e.message}", e)
@@ -202,6 +215,7 @@ class DMPConnection implements hubitat.helper.Interface {
         }
 
         reconnectPending = true
+        logDebug("Reconnect scheduled for ${host}:${port} in ${reconnectDelaySeconds}s")
         logWarn("Scheduling reconnect in ${reconnectDelaySeconds}s")
 
         try {
@@ -225,6 +239,7 @@ class DMPConnection implements hubitat.helper.Interface {
                 reconnect()
             } else if (action == 'keepalive' && connected && isConnected() && !keepaliveActive) {
                 keepaliveActive = true
+                logDebug("Keepalive sent")
                 sendCommand('!H')
                 keepaliveActive = false
                 if (connected && isConnected()) {
@@ -235,7 +250,9 @@ class DMPConnection implements hubitat.helper.Interface {
     }
 
     private void logDebug(String msg) {
-        Logger.debug(owner, msg)
+        if (debugLogging) {
+            Logger.debug(owner, msg)
+        }
     }
 
     private void logInfo(String msg) {

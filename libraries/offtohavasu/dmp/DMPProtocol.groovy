@@ -25,6 +25,7 @@ class DMPProtocol {
     private final String remoteKey
     private final DMPCrypto crypto
     private String lastNakDetail
+    private String panelIdentityInfo
 
     DMPProtocol(String accountNumber, String remoteKey = "") {
         String normalizedAccount = accountNumber == null ? "" : accountNumber.toString()
@@ -37,10 +38,15 @@ class DMPProtocol {
         int accountInt = Integer.parseInt(this.accountNumber.trim() ?: "0")
         this.crypto = new DMPCrypto(accountInt, this.remoteKey)
         this.lastNakDetail = null
+        this.panelIdentityInfo = null
     }
 
     String getLastNakDetail() {
         return lastNakDetail
+    }
+
+    String getPanelIdentityInfo() {
+        return panelIdentityInfo
     }
 
     byte[] encodeCommand(String command, Map<String, Object> kwargs = [:]) {
@@ -64,6 +70,9 @@ class DMPProtocol {
 
             List<String> lines = decoded.split(Pattern.quote(RESPONSE_DELIMITER)) as List<String>
             StatusResponse statusResponse = new StatusResponse(areas: [:], zones: [:])
+            for (String line : lines) {
+                updatePanelIdentityInfo(line)
+            }
             OutputsResponse outputsResponse = new OutputsResponse(outputs: [:])
             boolean hasStatusData = false
             boolean hasOutputData = false
@@ -160,6 +169,29 @@ class DMPProtocol {
             return null
         } catch (Exception e) {
             throw new DMPInvalidResponseError("Failed to decode response: ${e.message}", e)
+        }
+    }
+
+    private void updatePanelIdentityInfo(String line) {
+        if (!line) {
+            return
+        }
+
+        String trimmed = line.trim()
+        if (!trimmed) {
+            return
+        }
+
+        String lower = trimmed.toLowerCase()
+        boolean relevant = lower.contains("firmware") || lower.contains("protocol") || lower.contains("version") || lower.contains("xt30") || lower.contains("xt-30") || lower.contains("panel") || lower.contains("dmp")
+        if (!relevant) {
+            return
+        }
+
+        if (panelIdentityInfo == null) {
+            panelIdentityInfo = trimmed
+        } else if (!panelIdentityInfo.contains(trimmed)) {
+            panelIdentityInfo = "${panelIdentityInfo} | ${trimmed}"
         }
     }
 
