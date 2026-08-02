@@ -1,2 +1,2 @@
 # Hubitat-DMP
-Integration to link Hubitat and DMP
+Integration to link Hubitat and DMP XT30
