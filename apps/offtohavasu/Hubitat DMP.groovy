@@ -1,3 +1,5 @@
+#include DMP_Client
+
 definition(
     name: "Hubitat DMP",
     namespace: "offtohavasu",
@@ -9,8 +11,6 @@ definition(
 preferences {
     page(name: "mainPage")
 }
-
-import offtohavasu.dmp.DMPClient
 
 void installed() {
     initialize()
