@@ -1,4 +1,4 @@
-#include DMP_Client
+#include offtohavasu.DMP_Client
 
 definition(
     name: "Hubitat DMP",
