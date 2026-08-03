@@ -1,5 +1,5 @@
 library(
-    name: "DMP Client",
+    name: "DMP_Client",
     base: "app",
     author: "Curtis Cienfuegos",
     category: "Security",
@@ -12,7 +12,7 @@ library(
 package offtohavasu.dmp
 
 import groovy.transform.CompileStatic
-import hubitatdmp.util.Logger
+import offtohavasu.dmp.util.Logger
 
 /**
  * High-level DMP panel session client.

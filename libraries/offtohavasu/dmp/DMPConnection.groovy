@@ -1,5 +1,5 @@
 library(
-    name: "DMP Connection",
+    name: "DMP_Connection",
     base: "app",
     author: "Curtis Cienfuegos",
     category: "Security",
@@ -12,7 +12,7 @@ library(
 package offtohavasu.dmp
 
 import hubitat.helper.SocketWrapper
-import hubitatdmp.util.Logger
+import offtohavasu.dmp.util.Logger
 
 /**
  * Transport-only DMP socket connection for Hubitat.

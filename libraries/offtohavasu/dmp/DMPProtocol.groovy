@@ -1,5 +1,5 @@
 library(
-    name: "DMP Protocol",
+    name: "DMP_Protocol",
     base: "app",
     author: "Curtis Cienfuegos",
     category: "Security",
@@ -13,7 +13,7 @@ package offtohavasu.dmp
 
 import java.util.regex.Pattern
 
-import hubitatdmp.protocol.Constants
+import offtohavasu.dmp.const.Constants
 import offtohavasu.dmp.model.AreaStatus
 import offtohavasu.dmp.model.OutputStatus
 import offtohavasu.dmp.model.OutputsResponse

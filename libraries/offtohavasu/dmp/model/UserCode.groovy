@@ -1,5 +1,5 @@
 library(
-    name: "DMP User Code Model",
+    name: "DMP_User_Code_Model",
     base: "app",
     author: "Curtis Cienfuegos",
     category: "Security",

@@ -1,5 +1,5 @@
 library(
-    name: "DMP Protocol Result",
+    name: "DMP_Protocol_Result",
     base: "app",
     author: "Curtis Cienfuegos",
     category: "Security",

@@ -1,5 +1,5 @@
 library(
-    name: "DMP Status Response Model",
+    name: "DMP_Status_Response_Model",
     base: "app",
     author: "Curtis Cienfuegos",
     category: "Security",

@@ -1,5 +1,5 @@
 library(
-    name: "DMP Output Status Model",
+    name: "DMP_Output_Status_Model",
     base: "app",
     author: "Curtis Cienfuegos",
     category: "Security",

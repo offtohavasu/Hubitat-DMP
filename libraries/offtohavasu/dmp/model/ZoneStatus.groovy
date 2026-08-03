@@ -1,5 +1,5 @@
 library(
-    name: "DMP Zone Status Model",
+    name: "DMP_Zone_Status_Model",
     base: "app",
     author: "Curtis Cienfuegos",
     category: "Security",

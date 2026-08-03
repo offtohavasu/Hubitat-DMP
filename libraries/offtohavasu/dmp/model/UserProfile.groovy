@@ -1,5 +1,5 @@
 library(
-    name: "DMP User Profile Model",
+    name: "DMP_User_Profile_Model",
     base: "app",
     author: "Curtis Cienfuegos",
     category: "Security",

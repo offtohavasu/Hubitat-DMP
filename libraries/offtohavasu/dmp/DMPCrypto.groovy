@@ -1,5 +1,5 @@
 library(
-    name: "DMP Crypto",
+    name: "DMP_Crypto",
     base: "app",
     author: "Curtis Cienfuegos",
     category: "Security",

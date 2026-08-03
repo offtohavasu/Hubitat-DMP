@@ -1,5 +1,5 @@
 library(
-    name: "DMP Protocol Constants",
+    name: "DMP_Protocol_Constants",
     base: "app",
     author: "Curtis Cienfuegos",
     category: "Security",
@@ -9,7 +9,7 @@ library(
     description: "Hubitat library containing shared constants for the DMP protocol implementation."
 )
 
-package hubitatdmp.protocol
+package offtohavasu.dmp.const
 
 class Constants {
     static final Integer DEFAULT_PORT = 2011

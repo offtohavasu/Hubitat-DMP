@@ -1,5 +1,5 @@
 library(
-    name: "DMP Outputs Response Model",
+    name: "DMP_Outputs_Response_Model",
     base: "app",
     author: "Curtis Cienfuegos",
     category: "Security",
