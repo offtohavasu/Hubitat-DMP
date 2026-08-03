@@ -52,11 +52,13 @@ private Object socket
 
 void installed() {
     initialize()
+    ensurePanelDevice()
 }
 
 void updated() {
     unsubscribe()
     initialize()
+    ensurePanelDevice()
 }
 
 void initialize() {
@@ -67,6 +69,28 @@ void initialize() {
     state.panelInfo = null
     state.debugLogging = settings.debugLogging ?: false
     socket = null
+}
+
+private void ensurePanelDevice() {
+    if (state.panelDeviceId) {
+        def existing = getChildDevice(state.panelDeviceId)
+        if (existing) {
+            return
+        }
+        state.panelDeviceId = null
+    }
+
+    def existingDevices = getChildDevices()
+    def existingDevice = existingDevices?.find { it?.deviceNetworkId?.startsWith('dmp-panel') || it?.name == 'DMP Panel' }
+    if (existingDevice) {
+        state.panelDeviceId = existingDevice.deviceNetworkId
+        return
+    }
+
+    def child = addChildDevice('offtohavasu', 'DMP Panel', "dmp-panel-${app.id}", [name: 'DMP Panel', label: 'DMP Panel'])
+    if (child) {
+        state.panelDeviceId = child.deviceNetworkId
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -95,14 +119,34 @@ private void connectToPanel() {
         return
     }
 
+    ensurePanelDevice()
+    def panelDevice = getChildDevice(state.panelDeviceId)
+    if (panelDevice) {
+        panelDevice.connect()
+        state.connected = true
+        state.lastError = null
+        updateDisplay()
+        return
+    }
+
     state.connected = false
     socket = null
-    state.lastError = 'Apps cannot open persistent raw TCP sockets directly. Hubitat expects a Driver implementing interfaces.rawSocket (or interfaces.telnet for telnet) for this kind of connection.'
+    state.lastError = 'Unable to locate the DMP panel child device.'
     updateDisplay()
     logInfo(state.lastError)
 }
 
 private void disconnectFromPanel() {
+    ensurePanelDevice()
+    def panelDevice = getChildDevice(state.panelDeviceId)
+    if (panelDevice) {
+        panelDevice.disconnect()
+        state.connected = false
+        state.lastError = 'Disconnected from panel driver.'
+        updateDisplay()
+        return
+    }
+
     socket = null
     state.connected = false
     state.lastError = 'No active socket connection from the App. Use a Driver implementing interfaces.rawSocket for persistent outbound TCP connections.'
