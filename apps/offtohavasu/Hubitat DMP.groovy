@@ -1,34 +1,22 @@
-#include offtohavasu.DMP_Client
-
 definition(
     name: "Hubitat DMP",
     namespace: "offtohavasu",
     author: "Curtis & ChatGPT",
-    description: "Parent app for XT30 communication testing",
+    description: "Native Hubitat app skeleton for XT30 communication",
     singleInstance: true
 )
+
+// -----------------------------------------------------------------------------
+// metadata
+// -----------------------------------------------------------------------------
 
 preferences {
     page(name: "mainPage")
 }
 
-void installed() {
-    initialize()
-}
-
-void updated() {
-    unsubscribe()
-    initialize()
-}
-
-void initialize() {
-    state.client = null
-    state.connected = false
-    state.authenticated = false
-    state.lastKeepAlive = null
-    state.lastError = null
-
-}
+// -----------------------------------------------------------------------------
+// preferences
+// -----------------------------------------------------------------------------
 
 Map mainPage() {
     dynamicPage(name: "mainPage", title: "Hubitat DMP") {
@@ -55,6 +43,32 @@ Map mainPage() {
     }
 }
 
+// -----------------------------------------------------------------------------
+// lifecycle (installed, updated, initialize)
+// -----------------------------------------------------------------------------
+
+void installed() {
+    initialize()
+}
+
+void updated() {
+    unsubscribe()
+    initialize()
+}
+
+void initialize() {
+    state.connected = false
+    state.authenticated = false
+    state.lastKeepAlive = null
+    state.lastError = null
+    state.panelInfo = null
+    state.debugLogging = settings.debugLogging ?: false
+}
+
+// -----------------------------------------------------------------------------
+// connection management
+// -----------------------------------------------------------------------------
+
 void appButtonHandler(buttonName) {
     switch (buttonName) {
         case 'connectButton':
@@ -64,91 +78,122 @@ void appButtonHandler(buttonName) {
             disconnectFromPanel()
             break
         case 'testButton':
-            testConnection()
+            loginToPanel()
             break
     }
 }
 
-void connectToPanel() {
-    try {
-        if (!settings.panelIp || !settings.panelPort || !settings.accountNumber) {
-            state.lastError = 'Panel IP, port, and account number are required'
-            updateDisplay()
-            return
-        }
-
-        if (state.client == null) {
-            state.client = new DMPClient(settings.panelIp, settings.panelPort.toInteger(), settings.accountNumber, settings.remoteKey ?: '', this, 5, 10, settings.debugLogging ?: false)
-        }
-
-        boolean transportConnected = state.client.connect()
-        state.connected = state.client.isConnected()
-
-        if (transportConnected && state.client.isConnected()) {
-            boolean authenticated = state.client.login()
-            state.authenticated = state.client.isAuthenticated()
-            if (authenticated) {
-                state.lastError = null
-            }
-        } else {
-            state.authenticated = false
-        }
-
-        state.lastKeepAlive = state.client.getLastKeepAlive()
-        state.lastError = state.client.getLastError()
-        updateDisplay()
-    } catch (Exception e) {
-        state.lastError = e.message
-        state.connected = false
-        state.authenticated = false
-        updateDisplay()
-    }
+private void connectToPanel() {
+    logInfo("connectToPanel() stub")
 }
 
-void disconnectFromPanel() {
-    try {
-        if (state.client != null) {
-            state.client.disconnect()
-        }
-    } catch (Exception e) {
-        state.lastError = e.message
-    } finally {
-        state.connected = false
-        state.authenticated = false
-        state.lastKeepAlive = null
-        state.lastError = state.lastError ?: 'Disconnected'
-        updateDisplay()
-    }
+private void disconnectFromPanel() {
+    logInfo("disconnectFromPanel() stub")
 }
 
-void testConnection() {
-    if (state.client == null) {
-        connectToPanel()
-        return
-    }
-
-    try {
-        Object status = state.client.requestStatus()
-        state.connected = state.client.isConnected()
-        state.authenticated = state.client.isAuthenticated()
-        state.lastKeepAlive = state.client.getLastKeepAlive()
-        state.lastError = state.client.getLastError()
-        updateDisplay()
-    } catch (Exception e) {
-        state.lastError = e.message
-        state.connected = false
-        state.authenticated = false
-        updateDisplay()
-    }
+private void loginToPanel() {
+    logInfo("loginToPanel() stub")
 }
 
-void updateDisplay() {
-    state.connected = state.client?.isConnected() ?: false
-    state.authenticated = state.client?.isAuthenticated() ?: false
-    state.lastKeepAlive = state.client?.getLastKeepAlive()
-    state.lastError = state.client?.getLastError() ?: state.lastError
-    sendEvent(name: "connected", value: state.connected ? "true" : "false")
-    sendEvent(name: "authenticated", value: state.authenticated ? "true" : "false")
-    sendEvent(name: "lastKeepAlive", value: state.lastKeepAlive?.toString())
-    sendEvent(name: "lastError", value: state.lastError ?: "")
+// -----------------------------------------------------------------------------
+// protocol engine
+// -----------------------------------------------------------------------------
+
+private Object sendCommand() {
+    logInfo("sendCommand() stub")
+    return null
+}
+
+private byte[] encodeCommand() {
+    logInfo("encodeCommand() stub")
+    return null
+}
+
+private Object decodeResponse() {
+    logInfo("decodeResponse() stub")
+    return null
+}
+
+private void parseStatus() {
+    logInfo("parseStatus() stub")
+}
+
+private void parseOutputs() {
+    logInfo("parseOutputs() stub")
+}
+
+private void parseUsers() {
+    logInfo("parseUsers() stub")
+}
+
+// -----------------------------------------------------------------------------
+// crypto engine
+// -----------------------------------------------------------------------------
+
+private String encryptPayload() {
+    logInfo("encryptPayload() stub")
+    return null
+}
+
+private String decryptPayload() {
+    logInfo("decryptPayload() stub")
+    return null
+}
+
+// -----------------------------------------------------------------------------
+// response parsing
+// -----------------------------------------------------------------------------
+
+private void handleSocketMessage() {
+    logInfo("handleSocketMessage() stub")
+}
+
+// -----------------------------------------------------------------------------
+// keepalive
+// -----------------------------------------------------------------------------
+
+private void startKeepalive() {
+    logInfo("startKeepalive() stub")
+}
+
+private void stopKeepalive() {
+    logInfo("stopKeepalive() stub")
+}
+
+// -----------------------------------------------------------------------------
+// public panel commands
+// -----------------------------------------------------------------------------
+
+void requestStatus() {
+    logInfo("requestStatus() stub")
+}
+
+void requestOutputs() {
+    logInfo("requestOutputs() stub")
+}
+
+void requestUsers() {
+    logInfo("requestUsers() stub")
+}
+
+void armArea() {
+    logInfo("armArea() stub")
+}
+
+void disarmArea() {
+    logInfo("disarmArea() stub")
+}
+
+void setOutput() {
+    logInfo("setOutput() stub")
+}
+
+// -----------------------------------------------------------------------------
+// logging helpers
+// -----------------------------------------------------------------------------
+
+private void logInfo(String message) {
+    if (state.debugLogging ?: false) {
+        log.debug(message)
+    }
 }
