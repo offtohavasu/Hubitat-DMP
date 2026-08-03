@@ -1,5 +1,3 @@
-import hubitat.helper.SocketWrapper
-
 definition(
     name: "Hubitat DMP",
     namespace: "offtohavasu",
@@ -49,7 +47,7 @@ Map mainPage() {
 // lifecycle (installed, updated, initialize)
 // -----------------------------------------------------------------------------
 
-private SocketWrapper socket
+private Object socket
 
 
 void installed() {
@@ -97,41 +95,19 @@ private void connectToPanel() {
         return
     }
 
-    logInfo("Attempting TCP connection to ${settings.panelIp}:${settings.panelPort}")
-
-    try {
-        if (socket == null) {
-            socket = new SocketWrapper(this)
-        } else {
-            socket.disconnect()
-        }
-
-        socket.connect(settings.panelIp, settings.panelPort.toInteger(), 10000)
-        state.connected = true
-        state.lastError = null
-        logInfo("TCP connection successful to ${settings.panelIp}:${settings.panelPort}")
-        updateDisplay()
-    } catch (Exception e) {
-        state.connected = false
-        state.lastError = e.message
-        logInfo("TCP connection failed: ${e.message}")
-        updateDisplay()
-    }
+    state.connected = false
+    socket = null
+    state.lastError = 'Apps cannot open persistent raw TCP sockets directly. Hubitat expects a Driver implementing interfaces.rawSocket (or interfaces.telnet for telnet) for this kind of connection.'
+    updateDisplay()
+    logInfo(state.lastError)
 }
 
 private void disconnectFromPanel() {
-    try {
-        if (socket != null) {
-            socket.disconnect()
-            logInfo("Disconnected from panel")
-        }
-    } catch (Exception e) {
-        logInfo("Disconnect error: ${e.message}")
-    } finally {
-        state.connected = false
-        state.lastError = 'Disconnected'
-        updateDisplay()
-    }
+    socket = null
+    state.connected = false
+    state.lastError = 'No active socket connection from the App. Use a Driver implementing interfaces.rawSocket for persistent outbound TCP connections.'
+    updateDisplay()
+    logInfo(state.lastError)
 }
 
 private void loginToPanel() {
