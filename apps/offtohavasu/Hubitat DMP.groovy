@@ -1,3 +1,5 @@
+import hubitat.helper.SocketWrapper
+
 definition(
     name: "Hubitat DMP",
     namespace: "offtohavasu",
@@ -47,6 +49,9 @@ Map mainPage() {
 // lifecycle (installed, updated, initialize)
 // -----------------------------------------------------------------------------
 
+private SocketWrapper socket
+
+
 void installed() {
     initialize()
 }
@@ -63,6 +68,7 @@ void initialize() {
     state.lastError = null
     state.panelInfo = null
     state.debugLogging = settings.debugLogging ?: false
+    socket = null
 }
 
 // -----------------------------------------------------------------------------
@@ -84,11 +90,48 @@ void appButtonHandler(buttonName) {
 }
 
 private void connectToPanel() {
-    logInfo("connectToPanel() stub")
+    if (!settings.panelIp || !settings.panelPort || !settings.accountNumber) {
+        state.lastError = 'Panel IP, port, and account number are required'
+        state.connected = false
+        updateDisplay()
+        return
+    }
+
+    logInfo("Attempting TCP connection to ${settings.panelIp}:${settings.panelPort}")
+
+    try {
+        if (socket == null) {
+            socket = new SocketWrapper(this)
+        } else {
+            socket.disconnect()
+        }
+
+        socket.connect(settings.panelIp, settings.panelPort.toInteger(), 10000)
+        state.connected = true
+        state.lastError = null
+        logInfo("TCP connection successful to ${settings.panelIp}:${settings.panelPort}")
+        updateDisplay()
+    } catch (Exception e) {
+        state.connected = false
+        state.lastError = e.message
+        logInfo("TCP connection failed: ${e.message}")
+        updateDisplay()
+    }
 }
 
 private void disconnectFromPanel() {
-    logInfo("disconnectFromPanel() stub")
+    try {
+        if (socket != null) {
+            socket.disconnect()
+            logInfo("Disconnected from panel")
+        }
+    } catch (Exception e) {
+        logInfo("Disconnect error: ${e.message}")
+    } finally {
+        state.connected = false
+        state.lastError = 'Disconnected'
+        updateDisplay()
+    }
 }
 
 private void loginToPanel() {
@@ -148,6 +191,48 @@ private void handleSocketMessage() {
     logInfo("handleSocketMessage() stub")
 }
 
+private void handleSocketMessage(Object data) {
+    if (data == null) {
+        return
+    }
+
+    byte[] payload = data instanceof byte[] ? (byte[]) data : data.toString().getBytes("UTF-8")
+    if (payload == null || payload.length == 0) {
+        return
+    }
+
+    state.lastSocketBytes = payload
+    logInfo("Inbound raw bytes: ${bytesToHex(payload)}")
+}
+
+void onSocketStatus(Object status) {
+    String statusText = status?.toString() ?: 'unknown'
+    logInfo("Socket status callback: ${statusText}")
+
+    if (statusText.equalsIgnoreCase('connected') || statusText.equalsIgnoreCase('open')) {
+        state.connected = true
+        state.lastError = null
+        updateDisplay()
+    } else if (statusText.equalsIgnoreCase('disconnected') || statusText.equalsIgnoreCase('closed') || statusText.equalsIgnoreCase('error')) {
+        state.connected = false
+        state.lastError = statusText
+        updateDisplay()
+    }
+}
+
+void onSocketData(Object data) {
+    logInfo("Socket data callback received")
+    handleSocketMessage(data)
+}
+
+void onSocketError(Object error) {
+    String errorText = error?.toString() ?: 'unknown socket error'
+    logInfo("Socket error callback: ${errorText}")
+    state.connected = false
+    state.lastError = errorText
+    updateDisplay()
+}
+
 // -----------------------------------------------------------------------------
 // keepalive
 // -----------------------------------------------------------------------------
@@ -191,6 +276,28 @@ void setOutput() {
 // -----------------------------------------------------------------------------
 // logging helpers
 // -----------------------------------------------------------------------------
+
+private void updateDisplay() {
+    sendEvent(name: "connected", value: state.connected ? "true" : "false")
+    sendEvent(name: "authenticated", value: state.authenticated ? "true" : "false")
+    sendEvent(name: "lastKeepAlive", value: state.lastKeepAlive?.toString())
+    sendEvent(name: "lastError", value: state.lastError ?: "")
+}
+
+private String bytesToHex(byte[] payload) {
+    if (payload == null || payload.length == 0) {
+        return ""
+    }
+
+    StringBuilder builder = new StringBuilder()
+    for (int i = 0; i < payload.length; i++) {
+        if (i > 0) {
+            builder.append(' ')
+        }
+        builder.append(String.format('%02x', payload[i] & 0xFF))
+    }
+    return builder.toString()
+}
 
 private void logInfo(String message) {
     if (state.debugLogging ?: false) {
