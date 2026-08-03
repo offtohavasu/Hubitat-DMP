@@ -15,8 +15,8 @@ preferences {
     }
 }
 
-private boolean connected = false
-private boolean debugLogging = false
+boolean connected = state.connected ?: false
+boolean debugLogging = settings.debugLogging ?: false
 
 void installed() {
     initialize()
@@ -28,6 +28,7 @@ void updated() {
 
 void initialize() {
     debugLogging = settings.debugLogging ?: false
+    state.connected = false
     connected = false
     sendEvent(name: "connected", value: "false")
     logDebug("Initializing DMP Panel")
@@ -49,10 +50,12 @@ void connect() {
 
     try {
         interfaces.rawSocket.connect(settings.panelIp, settings.panelPort.toInteger(), 10000)
+        state.connected = true
         connected = true
         sendEvent(name: "connected", value: "true")
         logDebug("Raw TCP connection requested to ${settings.panelIp}:${settings.panelPort}")
     } catch (Exception e) {
+        state.connected = false
         connected = false
         sendEvent(name: "connected", value: "false")
         logDebug("Raw TCP connection failed: ${e.message}")
@@ -62,6 +65,7 @@ void connect() {
 void disconnect() {
     try {
         interfaces.rawSocket.disconnect()
+        state.connected = false
         connected = false
         sendEvent(name: "connected", value: "false")
         logDebug("Raw TCP socket disconnected")
@@ -75,9 +79,11 @@ void onSocketStatus(Object status) {
     logDebug("Socket status callback: ${statusText}")
 
     if (statusText.equalsIgnoreCase("connected") || statusText.equalsIgnoreCase("open")) {
+        state.connected = true
         connected = true
         sendEvent(name: "connected", value: "true")
     } else if (statusText.equalsIgnoreCase("disconnected") || statusText.equalsIgnoreCase("closed") || statusText.equalsIgnoreCase("error")) {
+        state.connected = false
         connected = false
         sendEvent(name: "connected", value: "false")
     }
@@ -98,6 +104,7 @@ void onSocketData(Object data) {
 
 void onSocketError(Object error) {
     String errorText = error?.toString() ?: "unknown socket error"
+    state.connected = false
     connected = false
     sendEvent(name: "connected", value: "false")
     logDebug("Socket error callback: ${errorText}")
