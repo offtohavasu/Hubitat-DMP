@@ -4,7 +4,9 @@ definition(
     author: "Curtis & ChatGPT",
     description: "Native Hubitat app skeleton for XT30 communication",
     category: "Safety & Security",
-    singleInstance: true
+    singleInstance: true,
+    iconUrl: "https://raw.githubusercontent.com/offtohavasu/Hubitat-DMP/main/docs/icon.png",
+    iconX2Url: "https://raw.githubusercontent.com/offtohavasu/Hubitat-DMP/main/docs/icon.png"
 )
 
 preferences {
@@ -24,6 +26,7 @@ Map mainPage() {
         section("Actions") {
             input "connectButton", "button", title: "Connect"
             input "disconnectButton", "button", title: "Disconnect"
+            href name: "done", title: "Done", required: false, page: "mainPage"
         }
 
         section("Status") {
@@ -43,13 +46,14 @@ void updated() {
     unsubscribe()
     initialize()
     ensurePanelDevice()
+    configurePanelDevice()
 }
 
 void initialize() {
     state.connected = false
     state.authenticated = false
     state.lastError = null
-    state.debugLogging = settings.debugLogging ?: false
+    state.debugLogging = settings?.debugLogging ?: false
 }
 
 void appButtonHandler(buttonName) {
@@ -67,6 +71,7 @@ void ensurePanelDevice() {
     if (state.panelDeviceId) {
         def existing = getChildDevice(state.panelDeviceId)
         if (existing) {
+            configurePanelDevice(existing)
             return
         }
         state.panelDeviceId = null
@@ -76,17 +81,28 @@ void ensurePanelDevice() {
     def existingDevice = existingDevices?.find { it?.deviceNetworkId?.startsWith('dmp-panel') || it?.name == 'DMP Panel' }
     if (existingDevice) {
         state.panelDeviceId = existingDevice.deviceNetworkId
+        configurePanelDevice(existingDevice)
         return
     }
 
     def child = addChildDevice('offtohavasu', 'DMP Panel', "dmp-panel-${app.id}", [name: 'DMP Panel', label: 'DMP Panel'])
     if (child) {
         state.panelDeviceId = child.deviceNetworkId
+        configurePanelDevice(child)
     }
 }
 
+void configurePanelDevice(def panelDevice = null) {
+    def targetDevice = panelDevice ?: getChildDevice(state?.panelDeviceId)
+    if (!targetDevice) {
+        return
+    }
+
+    targetDevice.configureConnection(settings?.panelIp, settings?.panelPort?.toInteger(), settings?.accountNumber, settings?.remoteKey)
+}
+
 void connectToPanel() {
-    if (!settings.panelIp || !settings.panelPort || !settings.accountNumber) {
+    if (!settings?.panelIp || !settings?.panelPort || !settings?.accountNumber) {
         state.lastError = 'Panel IP, port, and account number are required'
         state.connected = false
         return
@@ -107,6 +123,12 @@ void connectToPanel() {
 }
 
 void disconnectFromPanel() {
+    if (!settings?.panelIp || !settings?.panelPort || !settings?.accountNumber) {
+        state.lastError = 'Panel IP, port, and account number are required'
+        state.connected = false
+        return
+    }
+
     ensurePanelDevice()
     def panelDevice = getChildDevice(state.panelDeviceId)
     if (panelDevice) {

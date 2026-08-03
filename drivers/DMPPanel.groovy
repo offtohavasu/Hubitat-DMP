@@ -3,14 +3,13 @@ metadata {
         capability "Initialize"
         capability "Refresh"
         command "connect"
+        command "configureConnection"
         command "disconnect"
     }
 }
 
 preferences {
     section("Panel Connection") {
-        input "panelIp", "text", title: "Panel IP Address", required: true
-        input "panelPort", "number", title: "Port", defaultValue: 2011, required: true
         input "debugLogging", "bool", title: "Enable debug logging", defaultValue: false
     }
 }
@@ -33,21 +32,29 @@ void refresh() {
     logDebug("Refresh requested")
 }
 
+void configureConnection(String ip, Integer port, String account, String remoteKey) {
+    state.panelIp = ip
+    state.panelPort = port
+    state.accountNumber = account
+    state.remoteKey = remoteKey
+    logDebug("Configured panel connection: ${state.panelIp}:${state.panelPort}")
+}
+
 void connect() {
-    if (!settings.panelIp || !settings.panelPort) {
+    if (!state.panelIp || !state.panelPort) {
         logDebug("Panel IP and port are required")
         state.connected = false
         sendEvent(name: "connected", value: "false")
         return
     }
 
-    logDebug("Attempting raw TCP connection to ${settings.panelIp}:${settings.panelPort}")
+    logDebug("Attempting raw TCP connection to ${state.panelIp}:${state.panelPort}")
 
     try {
-        interfaces.rawSocket.connect(settings.panelIp, settings.panelPort.toInteger(), 10000)
+        interfaces.rawSocket.connect(state.panelIp, state.panelPort.toInteger())
         state.connected = true
         sendEvent(name: "connected", value: "true")
-        logDebug("Raw TCP connection requested to ${settings.panelIp}:${settings.panelPort}")
+        logDebug("Raw TCP connection requested to ${state.panelIp}:${state.panelPort}")
     } catch (Exception e) {
         state.connected = false
         sendEvent(name: "connected", value: "false")
@@ -66,8 +73,8 @@ void disconnect() {
     }
 }
 
-void onSocketStatus(Object status) {
-    String statusText = status?.toString() ?: "unknown"
+void socketStatus(String message) {
+    String statusText = message?.toString() ?: "unknown"
     logDebug("Socket status callback: ${statusText}")
 
     if (statusText.equalsIgnoreCase("connected") || statusText.equalsIgnoreCase("open")) {
@@ -79,12 +86,12 @@ void onSocketStatus(Object status) {
     }
 }
 
-void onSocketData(Object data) {
-    if (data == null) {
+void parse(String message) {
+    if (message == null) {
         return
     }
 
-    byte[] payload = data instanceof byte[] ? (byte[]) data : data.toString().getBytes("UTF-8")
+    byte[] payload = message instanceof byte[] ? (byte[]) message : message.toString().getBytes("UTF-8")
     if (payload == null || payload.length == 0) {
         return
     }
