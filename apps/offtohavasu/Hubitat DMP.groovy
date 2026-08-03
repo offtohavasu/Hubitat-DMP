@@ -14,7 +14,11 @@ preferences {
 }
 
 Map mainPage() {
-    dynamicPage(name: "mainPage", title: "Hubitat DMP") {
+    dynamicPage(
+    name: "mainPage",
+    title: "Hubitat DMP",
+    install: true,
+    uninstall: true) {
         section("Panel Connection") {
             input "panelIp", "text", title: "Panel IP Address", required: true
             input "panelPort", "number", title: "Port", defaultValue: 2011, required: true
@@ -26,7 +30,7 @@ Map mainPage() {
         section("Actions") {
             input "connectButton", "button", title: "Connect"
             input "disconnectButton", "button", title: "Disconnect"
-            href name: "done", title: "Done", required: false, page: "mainPage"
+         
         }
 
         section("Status") {
@@ -46,7 +50,6 @@ void updated() {
     unsubscribe()
     initialize()
     ensurePanelDevice()
-    configurePanelDevice()
 }
 
 void initialize() {
@@ -71,7 +74,7 @@ void ensurePanelDevice() {
     if (state.panelDeviceId) {
         def existing = getChildDevice(state.panelDeviceId)
         if (existing) {
-            configurePanelDevice(existing)
+            syncPanelDeviceSettings(existing)
             return
         }
         state.panelDeviceId = null
@@ -81,24 +84,27 @@ void ensurePanelDevice() {
     def existingDevice = existingDevices?.find { it?.deviceNetworkId?.startsWith('dmp-panel') || it?.name == 'DMP Panel' }
     if (existingDevice) {
         state.panelDeviceId = existingDevice.deviceNetworkId
-        configurePanelDevice(existingDevice)
+        syncPanelDeviceSettings(existingDevice)
         return
     }
 
     def child = addChildDevice('offtohavasu', 'DMP Panel', "dmp-panel-${app.id}", [name: 'DMP Panel', label: 'DMP Panel'])
     if (child) {
         state.panelDeviceId = child.deviceNetworkId
-        configurePanelDevice(child)
+        syncPanelDeviceSettings(child)
     }
 }
 
-void configurePanelDevice(def panelDevice = null) {
+void syncPanelDeviceSettings(def panelDevice = null) {
     def targetDevice = panelDevice ?: getChildDevice(state?.panelDeviceId)
     if (!targetDevice) {
         return
     }
 
-    targetDevice.configureConnection(settings?.panelIp, settings?.panelPort?.toInteger(), settings?.accountNumber, settings?.remoteKey)
+    targetDevice.updateDataValue("panelIp", settings?.panelIp ?: "")
+    targetDevice.updateDataValue("panelPort", settings?.panelPort?.toString() ?: "")
+    targetDevice.updateDataValue("accountNumber", settings?.accountNumber ?: "")
+    targetDevice.updateDataValue("remoteKey", settings?.remoteKey ?: "")
 }
 
 void connectToPanel() {

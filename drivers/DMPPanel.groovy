@@ -3,7 +3,6 @@ metadata {
         capability "Initialize"
         capability "Refresh"
         command "connect"
-        command "configureConnection"
         command "disconnect"
     }
 }
@@ -32,29 +31,34 @@ void refresh() {
     logDebug("Refresh requested")
 }
 
-void configureConnection(String ip, Integer port, String account, String remoteKey) {
-    state.panelIp = ip
-    state.panelPort = port
-    state.accountNumber = account
-    state.remoteKey = remoteKey
-    logDebug("Configured panel connection: ${state.panelIp}:${state.panelPort}")
-}
-
 void connect() {
-    if (!state.panelIp || !state.panelPort) {
+    def panelIp = getDataValue("panelIp")
+    def panelPort = getDataValue("panelPort")
+    def accountNumber = getDataValue("accountNumber")
+    def remoteKey = getDataValue("remoteKey")
+
+    if (!panelIp || !panelPort) {
         logDebug("Panel IP and port are required")
         state.connected = false
         sendEvent(name: "connected", value: "false")
         return
     }
 
-    logDebug("Attempting raw TCP connection to ${state.panelIp}:${state.panelPort}")
+    logDebug("Attempting raw TCP connection to ${panelIp}:${panelPort}")
+    logDebug("panelIp = ${getDataValue('panelIp')}")
+    logDebug("panelPort = ${getDataValue('panelPort')}")
+    logDebug("accountNumber = ${getDataValue('accountNumber')}")
+    logDebug("remoteKey present = ${getDataValue('remoteKey') ? 'yes' : 'no'}")
 
     try {
-        interfaces.rawSocket.connect(state.panelIp, state.panelPort.toInteger())
+        interfaces.rawSocket.connect(
+            panelIp,
+            panelPort.toInteger(),
+            [byteInterface: true]
+        )
         state.connected = true
         sendEvent(name: "connected", value: "true")
-        logDebug("Raw TCP connection requested to ${state.panelIp}:${state.panelPort}")
+        logDebug("Raw TCP connection requested to ${panelIp}:${panelPort}")
     } catch (Exception e) {
         state.connected = false
         sendEvent(name: "connected", value: "false")
