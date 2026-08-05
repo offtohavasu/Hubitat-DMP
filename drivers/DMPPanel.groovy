@@ -124,10 +124,7 @@ void onSocketError(Object error) {
     logDebug("Socket error callback: ${errorText}")
 }
 
-private String bytesToHex(byte[] payload) {
-    if (payload == null || payload.length == 0) {
-        return ""
-    }
+
 
     StringBuilder builder = new StringBuilder()
     for (int i = 0; i < payload.length; i++) {
