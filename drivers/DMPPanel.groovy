@@ -23,7 +23,7 @@ void updated() {
 
 void initialize() {
     state.connected = false
-    sendEvent(name: "connected", value: "false")
+    // sendEvent(name: "connected", value: "false")
     logDebug("Initializing DMP Panel")
 }
 
@@ -32,45 +32,56 @@ void refresh() {
 }
 
 void connect() {
+
     def panelIp = getDataValue("panelIp")
     def panelPort = getDataValue("panelPort")
     def accountNumber = getDataValue("accountNumber")
     def remoteKey = getDataValue("remoteKey")
 
+    logDebug("panelIp = ${panelIp}")
+    logDebug("panelPort = ${panelPort}")
+    logDebug("accountNumber = ${accountNumber}")
+    logDebug("remoteKey present = ${remoteKey ? 'yes' : 'no'}")
+
     if (!panelIp || !panelPort) {
         logDebug("Panel IP and port are required")
         state.connected = false
-        sendEvent(name: "connected", value: "false")
+      //  sendEvent(name: "connected", value: "false")
         return
     }
 
-    logDebug("Attempting raw TCP connection to ${panelIp}:${panelPort}")
-    logDebug("panelIp = ${getDataValue('panelIp')}")
-    logDebug("panelPort = ${getDataValue('panelPort')}")
-    logDebug("accountNumber = ${getDataValue('accountNumber')}")
-    logDebug("remoteKey present = ${getDataValue('remoteKey') ? 'yes' : 'no'}")
-
     try {
+
+        logDebug("Attempting raw TCP connection to ${panelIp}:${panelPort}")
+
         interfaces.rawSocket.connect(
             panelIp,
-            panelPort.toInteger(),
-            [byteInterface: true]
+            panelPort.toInteger()
         )
-        state.connected = true
-        sendEvent(name: "connected", value: "true")
+
         logDebug("Raw TCP connection requested to ${panelIp}:${panelPort}")
+
+        String auth = "@${accountNumber}!V2${remoteKey}\r"
+
+        logDebug("Sending AUTH command")
+
+        interfaces.rawSocket.sendMessage(auth)
+
     } catch (Exception e) {
+
         state.connected = false
-        sendEvent(name: "connected", value: "false")
+       // sendEvent(name: "connected", value: "false")
+
         logDebug("Raw TCP connection failed: ${e.message}")
     }
 }
+    
 
 void disconnect() {
     try {
         interfaces.rawSocket.disconnect()
         state.connected = false
-        sendEvent(name: "connected", value: "false")
+       // sendEvent(name: "connected", value: "false")
         logDebug("Raw TCP socket disconnected")
     } catch (Exception e) {
         logDebug("Disconnect failed: ${e.message}")
@@ -83,30 +94,33 @@ void socketStatus(String message) {
 
     if (statusText.equalsIgnoreCase("connected") || statusText.equalsIgnoreCase("open")) {
         state.connected = true
-        sendEvent(name: "connected", value: "true")
+      //  sendEvent(name: "connected", value: "true")
     } else if (statusText.equalsIgnoreCase("disconnected") || statusText.equalsIgnoreCase("closed") || statusText.equalsIgnoreCase("error")) {
         state.connected = false
-        sendEvent(name: "connected", value: "false")
+       //  sendEvent(name: "connected", value: "false")
     }
 }
 
 void parse(String message) {
+
     if (message == null) {
+        logDebug("RAW MESSAGE: <null>")
         return
     }
 
-    byte[] payload = message instanceof byte[] ? (byte[]) message : message.toString().getBytes("UTF-8")
-    if (payload == null || payload.length == 0) {
-        return
-    }
+    logDebug("RAW MESSAGE: ${message}")
 
-    logDebug("Raw socket receive: ${bytesToHex(payload)}")
+    if (message.contains("2B563032")) {
+        logDebug("Panel authentication acknowledged")
+        state.authenticated = true
+    }
 }
+ 
 
 void onSocketError(Object error) {
     String errorText = error?.toString() ?: "unknown socket error"
     state.connected = false
-    sendEvent(name: "connected", value: "false")
+   // sendEvent(name: "connected", value: "false")
     logDebug("Socket error callback: ${errorText}")
 }
 
