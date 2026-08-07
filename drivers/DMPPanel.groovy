@@ -110,10 +110,19 @@ void parse(String message) {
 
     logDebug("RAW MESSAGE: ${message}")
 
-    if (message.contains("2B563032")) {
-        logDebug("Panel authentication acknowledged")
-        state.authenticated = true
-    }
+   if (message.contains("2B563032")) {
+
+    logDebug("Panel authentication acknowledged")
+
+    state.authenticated = true
+
+    String accountNumber = getDataValue("accountNumber")
+    String statusCmd = "@${accountNumber}?WB**Y001\r"
+
+    logDebug("TX: ${statusCmd}")
+
+    interfaces.rawSocket.sendMessage(statusCmd)
+}
 }
  
 
@@ -126,15 +135,7 @@ void onSocketError(Object error) {
 
 
 
-    StringBuilder builder = new StringBuilder()
-    for (int i = 0; i < payload.length; i++) {
-        if (i > 0) {
-            builder.append(' ')
-        }
-        builder.append(String.format('%02x', payload[i] & 0xFF))
-    }
-    return builder.toString()
-}
+   
 
 private void logDebug(String message) {
     if (settings?.debugLogging) {
